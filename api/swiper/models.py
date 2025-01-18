@@ -14,6 +14,7 @@ class PostInteraction(models.Model):
     # The interaction
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     liked = models.BooleanField(null=True)
+    double_dislike = models.BooleanField(default=False)  # New field for double dislike
     interaction_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:

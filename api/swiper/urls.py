@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import FirehoseView
+from .views import FirehoseView, LeaderboardView
 
 urlpatterns = [
     # GET /api/posts/next/
@@ -28,4 +28,8 @@ urlpatterns = [
     #   "created_at": "Optional timestamp..."
     # }
     path('posts/interact/', FirehoseView.as_view(), name='post-interaction'),
+
+    # GET /api/posts/leaderboard/
+    # Get the top posts sorted by likes/dislikes
+    path('posts/leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
 ] 

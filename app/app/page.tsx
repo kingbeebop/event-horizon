@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserOAuthClient } from '@atproto/oauth-client-browser';
 import PostInteractionButtons from '@/components/PostInteractionButtons';
+import Leaderboard, { LeaderboardRef } from '@/components/Leaderboard';
 
 // Initialize the OAuth client for development using loopback configuration
 const oauthClient = new BrowserOAuthClient({
@@ -28,6 +29,7 @@ export default function Home() {
   const [handle, setHandle] = useState<string>('');
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
   const [isLoadingPost, setIsLoadingPost] = useState(false);
+  const leaderboardRef = useRef<LeaderboardRef>(null);
 
   // Fetch the next post from the firehose
   const fetchNextPost = async () => {
@@ -132,81 +134,92 @@ export default function Home() {
       <h1 className="text-4xl font-bold text-blue-600 mb-12 mt-8">Yaynaysky</h1>
 
       {/* Main Content Area */}
-      <div className="w-full max-w-2xl mx-auto">
-        {/* Real Post Display */}
-        {isLoadingPost ? (
-          <div className="bg-white p-6 rounded-lg shadow-lg mb-8 flex justify-center items-center h-48">
-            <div className="text-gray-500">Loading post...</div>
-          </div>
-        ) : currentPost ? (
-          <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
-            <div className="flex items-center mb-4">
-              <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 font-bold">
-                  {currentPost.author_did.slice(0, 2).toUpperCase()}
-                </span>
+      <div className="w-full max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Post Section - Takes up 2 columns */}
+          <div className="md:col-span-2">
+            {/* Real Post Display */}
+            {isLoadingPost ? (
+              <div className="bg-white p-6 rounded-lg shadow-lg mb-8 flex justify-center items-center h-48">
+                <div className="text-gray-500">Loading post...</div>
               </div>
-              <div className="ml-4">
-                <h3 className="font-semibold text-gray-800">{currentPost.author_did}</h3>
-                <p className="text-sm text-gray-500">{currentPost.uri}</p>
+            ) : currentPost ? (
+              <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-bold">
+                      {currentPost.author_did.slice(0, 2).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="font-semibold text-gray-800">{currentPost.author_did}</h3>
+                    <p className="text-sm text-gray-500">{currentPost.uri}</p>
+                  </div>
+                  <span className="ml-auto text-sm text-gray-400">
+                    {new Date(currentPost.created_at).toLocaleString()}
+                  </span>
+                </div>
+                <p className="text-gray-700 text-lg mb-4">{currentPost.text}</p>
+                <PostInteractionButtons 
+                  post={currentPost} 
+                  onNextPost={(response) => setCurrentPost(response.post)}
+                  leaderboardRef={leaderboardRef}
+                />
+                <div className="flex items-center justify-between text-gray-500 text-sm mt-4">
+                  <button 
+                    onClick={fetchNextPost}
+                    className="bg-blue-100 hover:bg-blue-200 text-blue-600 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out"
+                  >
+                    Next Post →
+                  </button>
+                  <span className="text-xs text-gray-400">CID: {currentPost.cid.slice(0, 10)}...</span>
+                </div>
               </div>
-              <span className="ml-auto text-sm text-gray-400">
-                {new Date(currentPost.created_at).toLocaleString()}
-              </span>
-            </div>
-            <p className="text-gray-700 text-lg mb-4">{currentPost.text}</p>
-            <PostInteractionButtons 
-              post={currentPost} 
-              onNextPost={(nextPost) => setCurrentPost(nextPost.post)} 
-            />
-            <div className="flex items-center justify-between text-gray-500 text-sm">
-              <button 
-                onClick={fetchNextPost}
-                className="bg-blue-100 hover:bg-blue-200 text-blue-600 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out"
-              >
-                Next Post →
-              </button>
-              <span className="text-xs text-gray-400">CID: {currentPost.cid.slice(0, 10)}...</span>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white p-6 rounded-lg shadow-lg mb-8 flex justify-center items-center h-48">
-            <div className="text-gray-500">No post available</div>
-          </div>
-        )}
+            ) : (
+              <div className="bg-white p-6 rounded-lg shadow-lg mb-8 flex justify-center items-center h-48">
+                <div className="text-gray-500">No post available</div>
+              </div>
+            )}
 
-        {/* Auth Section */}
-        <div className="w-full flex flex-col items-center bg-white p-8 rounded-lg shadow-lg">
-          {!isAuthenticated ? (
-            <div className="flex flex-col items-center space-y-4 w-full max-w-md">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Join the conversation</h2>
-              <input
-                type="text"
-                placeholder="Your handle (e.g. you.bsky.social)"
-                value={handle}
-                onChange={(e) => setHandle(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-              />
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <button
-                onClick={handleLogin}
-                disabled={isLoading || !handle}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? 'Connecting...' : 'Login with Bluesky'}
-              </button>
+            {/* Auth Section */}
+            <div className="w-full flex flex-col items-center bg-white p-8 rounded-lg shadow-lg">
+              {!isAuthenticated ? (
+                <div className="flex flex-col items-center space-y-4 w-full max-w-md">
+                  <h2 className="text-2xl font-semibold text-gray-800 mb-4">Join the conversation</h2>
+                  <input
+                    type="text"
+                    placeholder="Your handle (e.g. you.bsky.social)"
+                    value={handle}
+                    onChange={(e) => setHandle(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+                  />
+                  {error && <p className="text-red-500 text-sm">{error}</p>}
+                  <button
+                    onClick={handleLogin}
+                    disabled={isLoading || !handle}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? 'Connecting...' : 'Login with Bluesky'}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center space-y-4">
+                  <p className="text-gray-700">Logged in as: <span className="font-semibold">{userDid}</span></p>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200 ease-in-out"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="flex flex-col items-center space-y-4">
-              <p className="text-gray-700">Logged in as: <span className="font-semibold">{userDid}</span></p>
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200 ease-in-out"
-              >
-                Logout
-              </button>
-            </div>
-          )}
+          </div>
+
+          {/* Leaderboard Section - Takes up 1 column */}
+          <div className="md:col-span-1">
+            <Leaderboard ref={leaderboardRef} />
+          </div>
         </div>
       </div>
     </main>
