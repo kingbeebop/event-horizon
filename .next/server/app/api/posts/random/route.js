@@ -1,0 +1,11 @@
+const CHUNK_PUBLIC_PATH = "server/app/api/posts/random/route.js";
+const runtime = require("../../../../chunks/[turbopack]_runtime.js");
+runtime.loadChunk("server/chunks/node_modules_next_b0b694._.js");
+runtime.loadChunk("server/chunks/node_modules_zod_lib_ec01c5._.js");
+runtime.loadChunk("server/chunks/node_modules_graphemer_lib_6210e9._.js");
+runtime.loadChunk("server/chunks/node_modules_@atproto_api_dist_ca5f1b._.js");
+runtime.loadChunk("server/chunks/node_modules_0a5d3b._.js");
+runtime.loadChunk("server/chunks/[root of the server]__d4985e._.js");
+runtime.loadChunk("server/chunks/_10f0ff._.js");
+runtime.getOrInstantiateRuntimeModule("[project]/.next-internal/server/app/api/posts/random/route/actions.js [app-rsc] (ecmascript)", CHUNK_PUBLIC_PATH);
+module.exports = runtime.getOrInstantiateRuntimeModule("[project]/node_modules/next/dist/esm/build/templates/app-route.js { INNER_APP_ROUTE => \"[project]/app/api/posts/random/route.ts [app-route] (ecmascript)\" } [app-route] (ecmascript)", CHUNK_PUBLIC_PATH).exports;
