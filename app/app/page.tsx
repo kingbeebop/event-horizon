@@ -1,162 +1,138 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { 
-  Box,
-  Container,
-  Typography,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
-  Alert,
-  CircularProgress,
-  ThemeProvider,
-  createTheme,
-  CssBaseline,
-} from "@mui/material";
-import * as cbor from 'cborg';
+import { useState, useEffect } from 'react';
+import { BrowserOAuthClient } from '@atproto/oauth-client-browser';
 
-interface RepoOperation {
-  action: string;
-  path: string;
-}
-
-interface RepoEvent {
-  repo: string;
-  ops: RepoOperation[];
-  time?: string;
-}
-
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-    background: {
-      default: '#121212',
-      paper: '#1e1e1e',
-    }
-  }
+// Initialize the OAuth client for development using loopback configuration
+const oauthClient = new BrowserOAuthClient({
+  handleResolver: 'https://bsky.social',
+  // For development, we use undefined clientMetadata to enable loopback mode
+  clientMetadata: undefined,
 });
 
+// Initialize the Bluesky agent
+
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
-  const [events, setEvents] = useState<RepoEvent[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userDid, setUserDid] = useState<string | null>(null);
+  const [handle, setHandle] = useState<string>('');
 
+  // Initialize OAuth client and check for existing session
   useEffect(() => {
-    if (!mounted) return;
-    
-    const uri = "wss://bsky.network/xrpc/com.atproto.sync.subscribeRepos";
-    const websocket = new WebSocket(uri, ['cbor']);
-
-    websocket.binaryType = 'arraybuffer';
-
-    websocket.onopen = () => {
-      setIsConnected(true);
-      setError(null);
-    };
-
-    websocket.onmessage = (event) => {
+    const initOAuth = async () => {
       try {
-        const buffer = event.data;
-        const data = cbor.decode(new Uint8Array(buffer).slice(1));
-        
-        if (data.ops) {
-          const newEvent: RepoEvent = {
-            repo: data.repo,
-            ops: data.ops,
-            time: new Date().toISOString()
-          };
-          
-          setEvents(prev => [newEvent, ...prev].slice(0, 100));
+        // Ensure we're using the loopback IP instead of localhost
+        if (window.location.hostname === 'localhost') {
+          window.location.replace(window.location.href.replace('localhost', '127.0.0.1'));
+          return;
         }
-      } catch (err) {
-        console.error("Error processing message:", err);
+
+        const result = await oauthClient.init();
+        if (result?.session) {
+          setIsAuthenticated(true);
+          setUserDid(result.session.sub);
+          console.log('Session initialized for:', result.session.sub);
+        }
+      } catch (error) {
+        console.error('OAuth initialization error:', error);
+        setError(error instanceof Error ? error.message : 'Failed to initialize OAuth');
       }
     };
 
-    websocket.onerror = (err) => {
-      console.error("WebSocket error:", err);
-      setError("WebSocket connection error");
-      setIsConnected(false);
-    };
-
-    websocket.onclose = () => {
-      setIsConnected(false);
-    };
-
-    return () => {
-      websocket.close();
-    };
-  }, [mounted]);
-
-  useEffect(() => {
-    setMounted(true);
+    initOAuth();
   }, []);
 
-  if (!mounted) return null;
+  const handleLogin = async () => {
+    if (!handle) {
+      setError('Please enter your Bluesky handle');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      await oauthClient.signIn(handle, {
+        state: Math.random().toString(36).substring(7),
+      });
+      // Note: This won't execute as signIn redirects the page
+    } catch (error) {
+      console.error('Login failed:', error);
+      setError(error instanceof Error ? error.message : 'Login failed');
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      // Clear all browser storage
+      await window.indexedDB.deleteDatabase('atproto-oauth');
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Clear cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.split('=');
+        document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      });
+
+      // Reset state
+      setIsAuthenticated(false);
+      setUserDid(null);
+      setHandle('');
+
+      // Force reload to clear any in-memory state
+      window.location.href = window.location.origin;
+    } catch (error) {
+      console.error('Logout failed:', error);
+      setError(error instanceof Error ? error.message : 'Failed to logout');
+    }
+  };
 
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Bluesky Firehose
-          </Typography>
-          
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
+        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
+          {!isAuthenticated ? (
+            <div className="flex flex-col items-center space-y-4">
+              <input
+                type="text"
+                placeholder="Your handle (e.g. you.bsky.social)"
+                value={handle}
+                onChange={(e) => setHandle(e.target.value)}
+                className="w-64 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+              <button
+                onClick={handleLogin}
+                disabled={isLoading || !handle}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Connecting...' : 'Login with Bluesky'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center space-y-4">
+              <p>Logged in as: {userDid}</p>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+              >
+                Logout
+              </button>
+            </div>
           )}
-          
-          <Alert 
-            severity={isConnected ? "success" : "warning"}
-            sx={{ mb: 2 }}
-          >
-            {isConnected ? "Connected to firehose" : "Disconnected"}
-          </Alert>
-        </Box>
+        </div>
+      </div>
 
-        {!events.length && isConnected && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-            <CircularProgress />
-          </Box>
+      <div className="flex-1 w-full flex flex-col items-center justify-center">
+        {isAuthenticated ? (
+          <p className="text-gray-600">Successfully authenticated with Bluesky!</p>
+        ) : (
+          <p className="text-gray-600">Please log in to continue</p>
         )}
-
-        <List>
-          {events.map((event, index) => (
-            <Paper 
-              key={`${event.time}-${index}`}
-              elevation={2} 
-              sx={{ mb: 2, p: 2 }}
-            >
-              <Typography variant="subtitle2" color="text.secondary">
-                {event.time}
-              </Typography>
-              <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                Repository: {event.repo}
-              </Typography>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                Operations:
-              </Typography>
-              <List dense>
-                {event.ops.map((op, opIndex) => (
-                  <ListItem key={opIndex}>
-                    <ListItemText
-                      primary={`${op.action} - ${op.path}`}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-              {index < events.length - 1 && <Divider sx={{ mt: 2 }} />}
-            </Paper>
-          ))}
-        </List>
-      </Container>
-    </ThemeProvider>
+      </div>
+    </main>
   );
 }
