@@ -173,7 +173,9 @@ class FirehoseService:
                                     for block in frame['body'].get('blocks', {}).get('blocks', []):
                                         if block['data'].get('$type') == 'app.bsky.feed.post':
                                             self.current_post = {
-                                                'author': frame['body'].get('repo'),
+                                                'cid': block['cid'],
+                                                'uri': f"at://{frame['body'].get('repo')}/{op.get('path')}",
+                                                'author_did': frame['body'].get('repo'),
                                                 'text': block['data'].get('text'),
                                                 'created_at': block['data'].get('createdAt')
                                             }
