@@ -9,7 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/server": "^11.11.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^6.4.0",
+    "@mui/material-nextjs": "^6.3.1",
     "@types/ws": "^8.5.13",
+    "cbor": "^10.0.3",
+    "cborg": "^4.2.7",
     "next": "15.1.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
