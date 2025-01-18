@@ -13,50 +13,17 @@ logger = logging.getLogger(__name__)
 @method_decorator(csrf_exempt, name='dispatch')
 class FirehoseView(View):
     async def get(self, request):
-        """Get the next post to show"""
-        logger.info("=== Starting GET request for next post ===")
+        """Get the next post"""
         try:
-            # Add timeout to prevent hanging
-            logger.info("Getting FirehoseService instance...")
             service = FirehoseService.get_instance()
-            logger.info("Got service instance, fetching post...")
+            response = await service.get_latest_post()
+            return JsonResponse(json.loads(response))
             
-            # Add timeout to the get_latest_post call
-            try:
-                event = await asyncio.wait_for(service.get_latest_post(), timeout=10.0)
-                logger.info(f"Got response from get_latest_post: {event}")
-            except asyncio.TimeoutError:
-                logger.error("Timeout waiting for post")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Request timed out'
-                }, status=504)
-            
-            if event:
-                logger.info(f"Successfully got post from repo: {event.repo}")
-                return JsonResponse({
-                    'success': True,
-                    'event': event.post_content if hasattr(event, 'post_content') else {
-                        'repo': event.repo,
-                        'ops': event.ops,
-                        'seq': event.seq,
-                        'commit': event.commit,
-                        'timestamp': event.timestamp
-                    }
-                })
-            else:
-                logger.warning("No posts available")
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No posts available'
-                })
         except Exception as e:
             logger.error(f"Error getting next post: {str(e)}", exc_info=True)
-            import traceback
-            logger.error(f"Full traceback: {traceback.format_exc()}")
             return JsonResponse({
                 'success': False,
-                'message': 'Internal server error'
+                'message': str(e)
             }, status=500)
 
     async def post(self, request):
