@@ -34,44 +34,37 @@ class FirehoseView(View):
         """
         Record a user's interaction with a post
         Endpoint: POST /api/posts/interact/
-        Requires authentication
         """
-        if not request.user.is_authenticated:
-            return JsonResponse({
-                'success': False,
-                'message': 'Authentication required'
-            }, status=401)
-
         try:
             data = json.loads(request.body)
             
             # Get required fields
             post_cid = data.get('post_cid')
-            post_uri = data.get('post_uri')
-            author_did = data.get('author_did')
             liked = data.get('liked')
             
+            # Validate required fields
+            if not all([post_cid, liked is not None]):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Missing required fields: post_cid, liked'
+                }, status=400)
+
             # Optional fields
+            post_uri = data.get('post_uri')
+            author_did = data.get('author_did')
             post_text = data.get('post_text')
             created_at = data.get('created_at')
 
-            # Validate required fields
-            if not all([post_cid, post_uri, author_did, liked is not None]):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Missing required fields: post_cid, post_uri, author_did, liked'
-                }, status=400)
-
             # Create or update the interaction
             interaction, created = await PostInteraction.objects.aupdate_or_create(
-                user=request.user,
                 post_cid=post_cid,
                 defaults={
                     'post_uri': post_uri,
                     'author_did': author_did,
                     'post_text': post_text,
                     'created_at': created_at,
-                    'liked': liked
+                    'liked': liked,
+                    'user': request.user if request.user.is_authenticated else None
                 }
             )
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { BrowserOAuthClient } from '@atproto/oauth-client-browser';
+import PostInteractionButtons from '@/components/PostInteractionButtons';
 
 // Initialize the OAuth client for development using loopback configuration
 const oauthClient = new BrowserOAuthClient({
@@ -154,6 +155,7 @@ export default function Home() {
               </span>
             </div>
             <p className="text-gray-700 text-lg mb-4">{currentPost.text}</p>
+            <PostInteractionButtons post={currentPost} />
             <div className="flex items-center justify-between text-gray-500 text-sm">
               <button 
                 onClick={fetchNextPost}
