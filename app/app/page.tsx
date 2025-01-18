@@ -155,7 +155,10 @@ export default function Home() {
               </span>
             </div>
             <p className="text-gray-700 text-lg mb-4">{currentPost.text}</p>
-            <PostInteractionButtons post={currentPost} />
+            <PostInteractionButtons 
+              post={currentPost} 
+              onNextPost={(nextPost) => setCurrentPost(nextPost.post)} 
+            />
             <div className="flex items-center justify-between text-gray-500 text-sm">
               <button 
                 onClick={fetchNextPost}

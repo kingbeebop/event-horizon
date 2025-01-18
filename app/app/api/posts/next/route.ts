@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     // Proxy the request to Django backend
-    const response = await fetch('http://localhost:8000/api/posts/next/', {
+    const response = await fetch('http://127.0.0.1:8000/api/posts/next/', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

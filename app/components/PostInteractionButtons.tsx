@@ -4,9 +4,10 @@ import { Post } from '@/types';
 
 interface PostInteractionButtonsProps {
   post: Post;
+  onNextPost?: (nextPost: Post) => void;
 }
 
-export default function PostInteractionButtons({ post }: PostInteractionButtonsProps) {
+export default function PostInteractionButtons({ post, onNextPost }: PostInteractionButtonsProps) {
   const handleInteraction = async (liked: boolean) => {
     try {
       const response = await fetch('http://localhost:8000/api/posts/interact/', {
@@ -23,8 +24,20 @@ export default function PostInteractionButtons({ post }: PostInteractionButtonsP
       if (!response.ok) {
         throw new Error('Failed to record interaction');
       }
+
+      const nextPostResponse = await fetch('http://localhost:8000/api/posts/next');
+      if (!nextPostResponse.ok) {
+        throw new Error('Failed to fetch next post');
+      }
+
+      const nextPostData = await nextPostResponse.json();
+      if (nextPostData.success && nextPostData.post) {
+        onNextPost?.(nextPostData);
+      } else {
+        throw new Error('Invalid next post data');
+      }
     } catch (error) {
-      console.error('Error recording interaction:', error);
+      console.error('Error handling interaction:', error);
     }
   };
 
